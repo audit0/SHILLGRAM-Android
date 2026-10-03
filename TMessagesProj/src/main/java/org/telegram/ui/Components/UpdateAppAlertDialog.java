@@ -257,7 +257,8 @@ public class UpdateAppAlertDialog extends BottomSheet {
         textView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         textView.setSingleLine(true);
         textView.setEllipsize(TextUtils.TruncateAt.END);
-        textView.setText(LocaleController.getString(R.string.UpdateNekogram));
+        // SHILLGRAM: our name, not Nekogram's.
+        textView.setText(io.github.audit0.shillgram.vpn.ShillVpn.tr("Update SHILLGRAM", "Обновить SHILLGRAM"));
         linearLayout.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 23, 16, 23, 0));
 
         TextView messageTextView = new TextView(getContext());
@@ -265,7 +266,7 @@ public class UpdateAppAlertDialog extends BottomSheet {
         messageTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         messageTextView.setMovementMethod(new AndroidUtilities.LinkMovementMethodMy());
         messageTextView.setLinkTextColor(Theme.getColor(Theme.key_dialogTextLink));
-        messageTextView.setText(LocaleController.formatString(R.string.AppUpdateVersionAndSize, appUpdate.version, update.document instanceof TLRPC.TL_document ? AndroidUtilities.formatFileSize(appUpdate.document.size) : "Play Store"));
+        messageTextView.setText(LocaleController.formatString(R.string.AppUpdateVersionAndSize, appUpdate.version, update.document instanceof TLRPC.TL_document ? AndroidUtilities.formatFileSize(appUpdate.document.size) : "GitHub")); // SHILLGRAM: APKs come from our GitHub releases.
         messageTextView.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.TOP);
         linearLayout.addView(messageTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 23, 0, 23, 5));
 

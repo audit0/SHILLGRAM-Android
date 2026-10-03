@@ -552,7 +552,9 @@ public class SharedConfig {
             } else {
                 passcodeSalt = new byte[0];
             }
-            lastUpdateCheckTime = preferences.getLong("appUpdateCheckTime", System.currentTimeMillis());
+            // SHILLGRAM: 0, not now: until this config is first saved (after the
+            // login) "now" would put the first update check off forever.
+            lastUpdateCheckTime = preferences.getLong("appUpdateCheckTime", 0);
             try {
                 String update = preferences.getString("appUpdate", null);
                 if (update != null) {

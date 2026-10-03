@@ -14,6 +14,8 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
 
+import io.github.audit0.shillgram.update.ShillUpdate;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -138,7 +140,8 @@ public class UpdateHelper extends BaseRemoteHelper {
     }
 
     public void checkNewVersionAvailable(Delegate delegate) {
-        load(delegate);
+        // SHILLGRAM: our releases on GitHub instead of Nekogram's helper bot.
+        ShillUpdate.check(delegate);
         ConfigHelper.getInstance().load();
     }
 

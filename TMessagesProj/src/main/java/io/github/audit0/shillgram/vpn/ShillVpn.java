@@ -23,6 +23,7 @@ import android.content.SharedPreferences;
 import android.provider.Settings;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
@@ -474,6 +475,46 @@ public final class ShillVpn {
                 } else if (!viaCore && core != null && port != 0 && state == State.ON) {
                     // The site is out of reach directly: through our own tunnel.
                     api(request, done, true);
+                } else {
+                    done.run(null);
+                }
+            });
+        });
+    }
+
+    /**
+     * GET a public page (the GitHub release feed): directly, then through
+     * our tunnel when it is on. done(null) when out of reach.
+     */
+    public void getText(String url, String accept, Callback<String> done) {
+        getTextVia(url, accept, false, done);
+    }
+
+    private void getTextVia(String url, String accept, boolean viaCore, Callback<String> done) {
+        final OkHttpClient client = viaCore ? tunnelClient() : direct;
+        io.execute(() -> {
+            String text = null;
+            try {
+                final Request http = new Request.Builder()
+                        .url(url)
+                        .header("User-Agent", "SHILLGRAM/" + BuildConfig.SHILLGRAM_VERSION)
+                        .header("Accept", accept)
+                        .get()
+                        .build();
+                try (Response response = client.newCall(http).execute()) {
+                    if (response.code() == 200) {
+                        text = response.body().string();
+                    }
+                }
+            } catch (Throwable ignored) {
+                text = null;
+            }
+            final String result = text;
+            AndroidUtilities.runOnUIThread(() -> {
+                if (result != null) {
+                    done.run(result);
+                } else if (!viaCore && core != null && port != 0 && state == State.ON) {
+                    getTextVia(url, accept, true, done);
                 } else {
                     done.run(null);
                 }
