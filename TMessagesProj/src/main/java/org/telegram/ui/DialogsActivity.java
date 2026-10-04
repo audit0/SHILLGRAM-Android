@@ -10,6 +10,7 @@ package org.telegram.ui;
 
 import io.github.audit0.shillgram.vpn.ShillVpn; // SHILLGRAM
 import io.github.audit0.shillgram.vpn.ShillVpnSheet; // SHILLGRAM
+import io.github.audit0.shillgram.support.ShillSupport; // SHILLGRAM
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.AndroidUtilities.lerp;
@@ -13846,6 +13847,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         // SHILLGRAM: "SHILLVPN · N дней" opens the built-in SHILLVPN screen.
         io.add(R.drawable.msg_policy, ShillVpn.getInstance().menuText(), () -> {
             ShillVpnSheet.show(this);
+        });
+        // SHILLGRAM: the support chat with the version, Android and VPN state.
+        io.add(R.drawable.msg_report, ShillVpn.tr("Report a problem", "Сообщить о проблеме"), () -> {
+            ShillSupport.report(this);
         });
         if (ApplicationLoader.applicationLoaderInstance != null) {
             ApplicationLoader.applicationLoaderInstance.addItemOptions(io);
