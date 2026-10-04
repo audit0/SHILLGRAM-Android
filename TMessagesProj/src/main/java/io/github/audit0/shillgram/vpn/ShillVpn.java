@@ -224,15 +224,17 @@ public final class ShillVpn {
 
     /**
      * Every page of the site opened from the app carries where it came
-     * from, so the site's statistics show what the app sells.
+     * from, so the site's statistics show what the app sells. The marks go
+     * after '#' with the page's own parameters (k=): the site answers 404
+     * to its pages with a query string, and the page reads the fragment.
      */
     static String siteUrl(String path, String campaign, String fragment) {
         String result = SITE
                 + path
-                + "?utm_source=shillgram&utm_medium=app&utm_campaign="
+                + "#utm_source=shillgram&utm_medium=app&utm_campaign="
                 + (campaign == null || campaign.isEmpty() ? "app" : campaign);
         if (fragment != null && !fragment.isEmpty()) {
-            result += '#' + fragment;
+            result += '&' + fragment;
         }
         return result;
     }
