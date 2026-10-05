@@ -1,5 +1,6 @@
 package org.telegram.ui;
 
+import io.github.audit0.shillgram.ghost.ShillGhost; // SHILLGRAM: ghost
 import android.graphics.Canvas;
 import android.text.TextUtils;
 import android.view.HapticFeedbackConstants;
@@ -881,6 +882,10 @@ public class EmojiAnimationsOverlay implements NotificationCenter.NotificationCe
 
     private void sendCurrentTaps() {
         if (lastTappedMsgId == 0) {
+            return;
+        }
+        if (ShillGhost.noTyping()) { // SHILLGRAM: ghost - the other side sees no emoji taps
+            clearSendingInfo();
             return;
         }
         TLRPC.TL_sendMessageEmojiInteraction interaction = new TLRPC.TL_sendMessageEmojiInteraction();

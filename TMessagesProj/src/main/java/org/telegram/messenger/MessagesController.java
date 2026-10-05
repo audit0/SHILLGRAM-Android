@@ -8,6 +8,8 @@
 
 package org.telegram.messenger;
 
+import io.github.audit0.shillgram.ghost.ShillGhost; // SHILLGRAM: ghost
+
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
 import static org.telegram.messenger.NotificationsController.TYPE_CHANNEL;
@@ -10531,7 +10533,9 @@ public class MessagesController extends BaseController implements NotificationCe
         checkReadTasks();
 
         if (getUserConfig().isClientActivated() && !getUserConfig().getCurrentUser().bot) {
-            if (!ignoreSetOnline && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
+            // SHILLGRAM: ghost - never "online"; the offline branch below sends "offline" once.
+            final boolean shillGhostOffline = ShillGhost.noOnline();
+            if (!shillGhostOffline && !ignoreSetOnline && getConnectionsManager().getPauseTime() == 0 && ApplicationLoader.isScreenOn && !ApplicationLoader.mainInterfacePausedStageQueue) {
                 if (ApplicationLoader.mainInterfacePausedStageQueueTime != 0 && Math.abs(ApplicationLoader.mainInterfacePausedStageQueueTime - System.currentTimeMillis()) > 1000) {
                     if (statusSettingState != 1 && (lastStatusUpdateTime == 0 || Math.abs(System.currentTimeMillis() - lastStatusUpdateTime) >= 55000 || offlineSent)) {
                         statusSettingState = 1;
@@ -10556,7 +10560,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         });
                     }
                 }
-            } else if (statusSettingState != 2 && !offlineSent && Math.abs(System.currentTimeMillis() - getConnectionsManager().getPauseTime()) >= 2000) {
+            } else if (statusSettingState != 2 && !offlineSent && (shillGhostOffline || Math.abs(System.currentTimeMillis() - getConnectionsManager().getPauseTime()) >= 2000)) {
                 statusSettingState = 2;
                 if (statusRequest != 0) {
                     getConnectionsManager().cancelRequest(statusRequest, true);
@@ -10606,7 +10610,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     TLRPC.TL_messages_getMessagesViews req = new TLRPC.TL_messages_getMessagesViews();
                     req.peer = getInputPeer(key);
                     req.id = channelViewsToSend.valueAt(a);
-                    req.increment = a == 0;
+                    req.increment = a == 0 && !ShillGhost.noRead(); // SHILLGRAM: ghost - fetch counts, don't add a view
                     getConnectionsManager().sendRequest(req, (response, error) -> {
                         if (response != null) {
                             TLRPC.TL_messages_messageViews res = (TLRPC.TL_messages_messageViews) response;
@@ -11396,6 +11400,9 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public boolean sendTyping(long dialogId, long threadMsgId, int action, String emojicon, int classGuid) {
         if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
+            return false;
+        }
+        if (ShillGhost.noTyping()) { // SHILLGRAM: ghost - no typing/uploading/emoji-seen actions
             return false;
         }
         final long selfId = UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId();
@@ -14417,6 +14424,9 @@ public class MessagesController extends BaseController implements NotificationCe
         long dialogId = messageObject.getDialogId();
         getMessagesStorage().markMessagesContentAsRead(dialogId, arrayList, 0, 0);
         getNotificationCenter().postNotificationName(NotificationCenter.messagesReadContent, dialogId, arrayList);
+        if (ShillGhost.noRead()) { // SHILLGRAM: ghost - listened/seen on this device only
+            return;
+        }
         if (messageObject.getId() < 0) {
             markMessageAsRead(messageObject.getDialogId(), messageObject.messageOwner.random_id, Integer.MIN_VALUE);
         } else {
@@ -14445,6 +14455,9 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public void markMentionMessageAsRead(int mid, long channelId, long did) {
         getMessagesStorage().markMentionMessageAsRead(-channelId, mid, did);
+        if (ShillGhost.noRead()) { // SHILLGRAM: ghost - the mention is read on this device only
+            return;
+        }
         if (channelId != 0) {
             TLRPC.TL_channels_readMessageContents req = new TLRPC.TL_channels_readMessageContents();
             req.channel = getInputChannel(channelId);
@@ -14493,6 +14506,12 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public void markMessageAsRead2(long dialogId, int mid, TLRPC.InputChannel inputChannel, int ttl, long taskId, boolean createDeleteTask) {
         if (mid == 0 || ttl < 0) {
+            return;
+        }
+        // SHILLGRAM: ghost - neither the server read nor the local destruct
+        // timer: the media stays as the sender believes it is, unopened.
+        // A pending task from before ghost mode stays for a later start.
+        if (ShillGhost.noRead()) {
             return;
         }
         if (DialogObject.isChatDialog(dialogId) && inputChannel == null) {
@@ -14559,6 +14578,9 @@ public class MessagesController extends BaseController implements NotificationCe
         if (chat == null) {
             return;
         }
+        if (ShillGhost.noRead()) { // SHILLGRAM: ghost - no read service message, no destruct timer
+            return;
+        }
         ArrayList<Long> randomIds = new ArrayList<>();
         randomIds.add(randomId);
         getSecretChatHelper().sendMessagesReadMessage(chat, randomIds, null);
@@ -14569,6 +14591,66 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     private void completeReadTask(ReadTask task) {
+        completeReadTask(task, false);
+    }
+
+    // SHILLGRAM: ghost - the last read-on-send receipt (see shillGhostOnSend).
+    private long shillGhostReadDialog;
+    private int shillGhostReadMaxId;
+    private long shillGhostReadTime;
+
+    // SHILLGRAM: ghost - called when the user sends a message into a chat
+    // (SendMessagesHelper.sendMessage). With "read the chat when I reply" the
+    // server gets that chat's read receipt up to its latest message: the
+    // answer shows it was read anyway. With "don't show online" the status
+    // timer sends "offline" again a moment later, since sending marks the
+    // account online on Telegram's side.
+    public void shillGhostOnSend(long dialogId) {
+        if (dialogId == 0) {
+            return;
+        }
+        if (ShillGhost.readOnSend() && !DialogObject.isEncryptedDialog(dialogId) && !isMonoForum(dialogId)) {
+            int maxId = 0;
+            try {
+                final Integer readMax = dialogs_read_inbox_max.get(dialogId);
+                if (readMax != null) {
+                    maxId = readMax;
+                }
+                final TLRPC.Dialog dialog = dialogs_dict.get(dialogId);
+                if (dialog != null) {
+                    maxId = Math.max(maxId, dialog.top_message);
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+            // An album calls this once per item: one receipt is enough.
+            final long now = SystemClock.elapsedRealtime();
+            if (maxId > 0 && (dialogId != shillGhostReadDialog || maxId != shillGhostReadMaxId || now - shillGhostReadTime > 2000)) {
+                shillGhostReadDialog = dialogId;
+                shillGhostReadMaxId = maxId;
+                shillGhostReadTime = now;
+                final ReadTask task = new ReadTask();
+                task.dialogId = dialogId;
+                task.maxId = maxId;
+                Utilities.stageQueue.postRunnable(() -> completeReadTask(task, true));
+            }
+        }
+        if (ShillGhost.noOnline()) {
+            Utilities.stageQueue.postRunnable(() -> {
+                if (ShillGhost.noOnline() && statusSettingState != 1) {
+                    offlineSent = false;
+                    statusSettingState = 0;
+                }
+            }, 3000);
+        }
+    }
+
+    // SHILLGRAM: ghost - with noRead the chat is already read locally (markDialogAsRead);
+    // the server is not told. The task is dropped, so nothing retries it.
+    private void completeReadTask(ReadTask task, boolean shillGhostBypass) {
+        if (!shillGhostBypass && ShillGhost.noRead()) {
+            return;
+        }
         if (task.replyId != 0 && task.monoForumPeerId == 0) {
             TLRPC.TL_messages_readDiscussion req = new TLRPC.TL_messages_readDiscussion();
             req.msg_id = (int) task.replyId;

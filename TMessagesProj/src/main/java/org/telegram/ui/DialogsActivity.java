@@ -11,6 +11,8 @@ package org.telegram.ui;
 import io.github.audit0.shillgram.vpn.ShillVpn; // SHILLGRAM
 import io.github.audit0.shillgram.vpn.ShillVpnSheet; // SHILLGRAM
 import io.github.audit0.shillgram.support.ShillSupport; // SHILLGRAM
+import io.github.audit0.shillgram.ghost.ShillGhost; // SHILLGRAM: ghost
+import io.github.audit0.shillgram.ghost.ShillGhostSettings; // SHILLGRAM: ghost
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.AndroidUtilities.lerp;
@@ -13851,6 +13853,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         // SHILLGRAM: the support chat with the version, Android and VPN state.
         io.add(R.drawable.msg_report, ShillVpn.tr("Report a problem", "Сообщить о проблеме"), () -> {
             ShillSupport.report(this);
+        });
+        // SHILLGRAM: ghost - the ghost mode switch and its options.
+        io.addChecked(ShillGhost.isEnabled(), ShillGhostSettings.icon(getContext(), 24), ShillGhostSettings.menuText(), () -> {
+            ShillGhostSettings.toggle(this);
+        });
+        io.add(R.drawable.msg_settings, ShillGhostSettings.settingsText(), () -> {
+            ShillGhostSettings.show(this);
         });
         if (ApplicationLoader.applicationLoaderInstance != null) {
             ApplicationLoader.applicationLoaderInstance.addItemOptions(io);

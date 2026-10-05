@@ -2082,6 +2082,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (messages == null || messages.isEmpty()) {
             return 0;
         }
+        if (scheduleDate == 0 && peer != 0) {
+            getMessagesController().shillGhostOnSend(peer); // SHILLGRAM: ghost - forwarding is replying too
+        }
         int sendResult = 0;
         long myId = getUserConfig().getClientUserId();
         boolean isChannel = false;
@@ -4333,6 +4336,11 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         final boolean isGroup = params != null && params.containsKey("groupId") && !"0".equalsIgnoreCase(params.get("groupId"));
 
         final boolean isWelcomeMessageTemplate = sendMessageChatArguments.welcomeMessageChatId != 0;
+        // SHILLGRAM: ghost - a new message the user sends now (not a retry, a
+        // scheduled one or a quick-reply template) reads the chat on the server.
+        if (scheduleDate == 0 && retryMessageObject == null && quick_reply_shortcut == null && quick_reply_shortcut_id == 0 && !isWelcomeMessageTemplate) {
+            getMessagesController().shillGhostOnSend(peer);
+        }
         final long ephemeralReceiverBotId;
         if (isWelcomeMessageTemplate) {
             ephemeralReceiverBotId = -1; // input user empty;

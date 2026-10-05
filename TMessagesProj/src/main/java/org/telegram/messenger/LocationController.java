@@ -8,6 +8,7 @@
 
 package org.telegram.messenger;
 
+import io.github.audit0.shillgram.ghost.ShillGhost; // SHILLGRAM: ghost
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -921,6 +922,9 @@ public class LocationController extends BaseController implements NotificationCe
             return;
         }
         lastReadLocationTime.put(dialogId, currentDate);
+        if (ShillGhost.noRead()) { // SHILLGRAM: ghost - live locations are seen on this device only
+            return;
+        }
         TLObject request;
         if (DialogObject.isChatDialog(dialogId) && ChatObject.isChannel(-dialogId, currentAccount)) {
             TLRPC.TL_channels_readMessageContents req = new TLRPC.TL_channels_readMessageContents();
